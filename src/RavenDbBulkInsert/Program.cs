@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using FizzWare.NBuilder;
 using FizzWare.NBuilder.Generators;
@@ -22,15 +23,8 @@ namespace RavenDbBulkInsert
         Database = "BulkInsertTest"
       }.Initialize();
 
-      // Create a list of fake employees.
-      var employee = Builder<Employee>.CreateListOfSize(1)
-          .All()
-          .With(x => x.FirstName, GetRandom.FirstName())
-          .And(x => x.LastName, GetRandom.LastName())
-          .Build()
-          .Single();
 
-      var employees = Enumerable.Repeat(employee, 10_000_000).ToList();
+      var iterations = Enumerable.Range(1, 1_000_000).ToList();
 
       Console.WriteLine("Created all fake employees.");
 
@@ -40,12 +34,21 @@ namespace RavenDbBulkInsert
       {
         var opts = new ParallelOptions()
         {
-          MaxDegreeOfParallelism = 512
+          MaxDegreeOfParallelism = 32
         };
 
-        Parallel.ForEach(employees, opts, e =>
+        var i = 0;
+        Parallel.ForEach(iterations, opts, e =>
         {
-          BulkInsertEmployees(Enumerable.Repeat(e, 1), documentStore);
+          var x = Interlocked.Increment(ref i);
+          if (x % 2 == 0)
+          {
+            BulkInsertEmployees(8192, documentStore);
+          }
+          else
+          {
+            StoreEmployees(8192, documentStore);
+          }
         });
       }
       catch (Exception exception)
@@ -55,14 +58,45 @@ namespace RavenDbBulkInsert
 
       stopwatch.Stop();
 
-      Console.WriteLine($"Inserted {employees.Count:N0} employee's in {stopwatch.Elapsed.TotalSeconds:N2} seconds.");
+      Console.WriteLine($"Inserted {iterations.Count:N0} employee's in {stopwatch.Elapsed.TotalSeconds:N2} seconds.");
 
       Console.WriteLine("-- Press any key to quit.");
       Console.ReadKey();
     }
 
-    private static void BulkInsertEmployees(IEnumerable<Employee> batch, IDocumentStore documentStore)
+    private static void StoreEmployees(int count, IDocumentStore documentStore)
     {
+
+      Console.WriteLine("Store");
+      // Create a list of fake employees.
+      var batch = Builder<Employee>.CreateListOfSize(count)
+          .All()
+          .With(x => x.FirstName, GetRandom.FirstName())
+          .And(x => x.LastName, GetRandom.LastName())
+          .Build();
+
+      using (var operation = documentStore.OpenSession())
+      {
+        foreach (var employee in batch)
+        {
+          operation.Store(employee);
+        }
+
+        operation.SaveChanges();
+      }
+    }
+
+    private static void BulkInsertEmployees(int count, IDocumentStore documentStore)
+    {
+
+      Console.WriteLine("Bulk");
+      // Create a list of fake employees.
+      var batch = Builder<Employee>.CreateListOfSize(count)
+          .All()
+          .With(x => x.FirstName, GetRandom.FirstName())
+          .And(x => x.LastName, GetRandom.LastName())
+          .Build();
+
       using (var operation = documentStore.BulkInsert())
       {
         foreach (var employee in batch)

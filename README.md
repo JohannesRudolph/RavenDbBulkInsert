@@ -1,6 +1,11 @@
+# Instructions
 
-- Run RavenDb 4 RC1
-- Create a new Database: `BulkInsertTest`
-- Compile and run sample console app.
+```bash
+docker-compose --compatibility up
 
-Happy Halloween!
+# create BulkInsertTest database on the server
+
+cd src/RavenDbBulkInsert
+dotnet restore
+dotnet run
+```

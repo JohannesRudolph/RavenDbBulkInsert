@@ -1,0 +1,22 @@
+version: "3.6"
+networks:
+  backend:
+services:
+  raven:
+    image: ravendb/ravendb:4.2.0-ubuntu.18.04-x64
+    container_name: ravendb
+    networks:
+      - backend
+    environment:
+      - RAVEN_ARGS=--Setup.Mode=None --log-to-console
+      - RAVEN_Security_UnsecuredAccessAllowed=PrivateNetwork
+      - RAVEN_Features_Availability=Experimental
+      - RAVEN_Logs_Mode=Operations
+      - RAVEN_License_Eula_Accepted=true
+    ports:
+      - "4040:8080" # run ravendb on port 4040
+      - "38888:38888"
+    deploy:
+      resources:
+        limits:
+          memory: 1024m
