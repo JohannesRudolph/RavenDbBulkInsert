@@ -10,65 +10,66 @@ using Raven.Client.Documents;
 
 namespace RavenDbBulkInsert
 {
-    public class Program
+  public class Program
+  {
+    public static async Task Main(string[] args)
     {
-        public static async Task Main(string[] args)
+      Console.WriteLine("Starting bulk insert testing app.");
+
+      var documentStore = new DocumentStore()
+      {
+        Urls = new[] { "http://localhost:4040" },
+        Database = "BulkInsertTest"
+      }.Initialize();
+
+      // Create a list of fake employees.
+      var employee = Builder<Employee>.CreateListOfSize(1)
+          .All()
+          .With(x => x.FirstName, GetRandom.FirstName())
+          .And(x => x.LastName, GetRandom.LastName())
+          .Build()
+          .Single();
+
+      var employees = Enumerable.Repeat(employee, 10_000_000).ToList();
+
+      Console.WriteLine("Created all fake employees.");
+
+      var stopwatch = Stopwatch.StartNew();
+
+      try
+      {
+        var opts = new ParallelOptions()
         {
-            Console.WriteLine("Starting bulk insert testing app.");
+          MaxDegreeOfParallelism = 512
+        };
 
-            var documentStore = new DocumentStore()
-            {
-                Urls = new[] {"http://localhost:8080"},
-                Database = "BulkInsertTest"
-            }.Initialize();
-
-            // Create a list of fake employees.
-            var employees = Builder<Employee>.CreateListOfSize(1000 * 1000)
-            //var employees = Builder<Employee>.CreateListOfSize(100)
-                .All()
-                .With(x => x.FirstName, GetRandom.FirstName())
-                .And(x => x.LastName, GetRandom.LastName())
-                .Build();
-
-            Console.WriteLine("Created all fake employees.");
-
-            var batches = employees.Batch(10000);
-
-            var stopwatch = Stopwatch.StartNew();
-
-            try
-            {
-                foreach (var batch in batches)
-                {
-                    await BulkInsertEmployees(batch, documentStore);
-                }
-            }
-            catch (Exception exception)
-            {
-                Console.WriteLine(exception);
-            }
-
-            stopwatch.Stop();
-
-            Console.WriteLine($"Inserted {employees.Count:N0} employee's in {stopwatch.Elapsed.TotalSeconds:N2} seconds.");
-
-            Console.WriteLine("-- Press any key to quit.");
-            Console.ReadKey();
-        }
-
-        private static async Task BulkInsertEmployees(IEnumerable<Employee> batch, IDocumentStore documentStore)
+        Parallel.ForEach(employees, opts, e =>
         {
-            using (var operation = documentStore.BulkInsert())
-            {
-                foreach (var employee in batch)
-                {
-                    await operation.StoreAsync(employee);
-                }
+          BulkInsertEmployees(Enumerable.Repeat(e, 1), documentStore);
+        });
+      }
+      catch (Exception exception)
+      {
+        Console.WriteLine(exception);
+      }
 
-                //var tasks = batch.Select(employee => operation.StoreAsync(employee)).ToArray();
+      stopwatch.Stop();
 
-                //await Task.WhenAll(tasks);
-            }
-        }
+      Console.WriteLine($"Inserted {employees.Count:N0} employee's in {stopwatch.Elapsed.TotalSeconds:N2} seconds.");
+
+      Console.WriteLine("-- Press any key to quit.");
+      Console.ReadKey();
     }
+
+    private static void BulkInsertEmployees(IEnumerable<Employee> batch, IDocumentStore documentStore)
+    {
+      using (var operation = documentStore.BulkInsert())
+      {
+        foreach (var employee in batch)
+        {
+          operation.Store(employee);
+        }
+      }
+    }
+  }
 }
