@@ -43,7 +43,8 @@ namespace RavenDbBulkInsert
           var x = Interlocked.Increment(ref i);
           if (x % 2 == 0)
           {
-            BulkInsertEmployees(8192, documentStore);
+            // BulkInsertEmployees(8192, documentStore);
+            StoreEmployees(8192, documentStore);
           }
           else
           {

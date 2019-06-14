@@ -1,0 +1,16 @@
+{
+  "Setup.Mode": "None",
+  "License.Path": "/opt/RavenDB/config/license.json",
+  "License.Eula.Accepted": "true",
+  "Security.UnsecuredAccessAllowed": "PrivateNetwork",
+  "Features": {
+    "Availability": "Experimental"
+  },
+  "Logs": {
+    "Mode": "Operations"
+  },
+  "Memory": {
+    "MaxFreeCommittedMemoryToKeepInMb": 512,
+    "MinimumFreeCommittedMemoryPercentage": 0.25
+  }
+}

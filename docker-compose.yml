@@ -8,11 +8,9 @@ services:
     networks:
       - backend
     environment:
-      - RAVEN_ARGS=--Setup.Mode=None --log-to-console
-      - RAVEN_Security_UnsecuredAccessAllowed=PrivateNetwork
-      - RAVEN_Features_Availability=Experimental
-      - RAVEN_Logs_Mode=Operations
-      - RAVEN_License_Eula_Accepted=true
+      - RAVEN_ARGS=--config-path /etc/ravendb/settings.json --log-to-console
+    volumes: 
+      - ./settings.json:/etc/ravendb/settings.json
     ports:
       - "4040:8080" # run ravendb on port 4040
       - "38888:38888"
